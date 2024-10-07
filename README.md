@@ -32,7 +32,7 @@ This Android application demonstrates how to use the Fused Location Provider to 
 
    ```bash
    
-   git clone https://github.com/Abhaykumarbhumihar/flutter_implicit_animation.git
+   git clone https://github.com/Abhaykumarbhumihar/mvvm_retrofit_coroutines.git
 
 
 Open in Android Studio
