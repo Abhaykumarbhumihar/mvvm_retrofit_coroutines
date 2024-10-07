@@ -30,34 +30,20 @@ import com.example.mvvm_api_implementation.network.ResponseListener
 import com.example.mvvm_api_implementation.network.WebServices
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.GooglePlayServicesUtil
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 import com.google.gson.Gson
-
 
 class MainActivity : AppCompatActivity(), ResponseListener {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: SearchNearByViewModel
     private lateinit var repository: SearchNearByRepository
-    private lateinit var viewModelProviders: SearchNearByViewModelProviders
-    private lateinit var webServices: WebServices
-    private lateinit var binding: ActivityMainBinding
-
+    private lateinit var placeAdapter: PlaceAdapter
     private var fusedLocationClient: FusedLocationProviderClient? = null
-
-    private val LOCATION_PERMISSION_REQUEST_CODE = 1
-    private var locationCallback: LocationCallback? = null
-
     private var latitude = 0.0
     private var longitude = 0.0
     private var locationString = ""
-    var arrayList = ArrayList<PlacePojo.Result>()
-    lateinit var placeLister: PlaceAdapter.PlaceLister
-    lateinit var placeAdapter: PlaceAdapter
+    private val arrayList = ArrayList<PlacePojo.Result>()
 
     // Permissions to be requested
     private val permissions = arrayOf(
@@ -67,100 +53,87 @@ class MainActivity : AppCompatActivity(), ResponseListener {
     )
 
     private val PERMISSION_REQUEST_CODE = 123
+    private var locationCallback: LocationCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        webServices = WebServices()
-        repository = SearchNearByRepository(webServices)
-        viewModelProviders = SearchNearByViewModelProviders(repository)
-        viewModel = ViewModelProvider(this, viewModelProviders)[SearchNearByViewModel::class.java]
-        viewModel.responseListener = this
-
+        setupViewModel()
         if (checkAndRequestPermissions()) {
-            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-            init()
+            initializeLocationClient()
+            initUI()
         }
     }
 
-    private fun init() {
+    private fun setupViewModel() {
+        val webServices = WebServices()
+        repository = SearchNearByRepository(webServices)
+        val viewModelProviders = SearchNearByViewModelProviders(repository)
+        viewModel = ViewModelProvider(this, viewModelProviders)[SearchNearByViewModel::class.java]
+        viewModel.responseListener = this
+    }
+
+    private fun initUI() {
         if (isGooglePlayServicesAvailable()) {
             startLocationUpdates()
         }
-        placeLister = object : PlaceAdapter.PlaceLister {
-            override fun click(position: Int) {
-                val intent = Intent()
-                intent.putExtra("address", arrayList[position].vicinity)
 
-            }
-        }
         binding.searhplce.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(p0: Editable?) {
-                Log.w("TextChanged", "afterTextChanged")
-            }
-
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-                Log.w("TextChanged", "beforeTextChanged")
-            }
-
-            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-                Log.w("TextChanged", "onTextChanged")
-
-                if (p0.toString().length >= 3) {
-                    val queryParams = hashMapOf<String, Any>(
-                        "type" to "restaurant",
-                        "location" to locationString,
-                        "name" to p0.toString(),
-                        "opennow" to true,
-                        "rankby" to "distance",
-                        "key" to AppConstants.MAP_KEY // Put your actual API key here
-                    )
-                    viewModel.searchNearyByLocation(queryParams, AppConstants.NEARBYURL)
+            override fun afterTextChanged(s: Editable?) {}
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (s.toString().length >= 3) {
+                    performLocationSearch(s.toString())
                 }
+            }
+        })
+
+        // Setup the place click listener
+        placeAdapter = PlaceAdapter(this, arrayList, placeLister = object :
+            PlaceAdapter.PlaceLister {
+            override fun click(position: Int) {
+                TODO("Not yet implemented")
             }
         })
     }
 
-    // Check and request permissions
-    private fun checkAndRequestPermissions(): Boolean {
-        val listPermissionsNeeded = ArrayList<String>()
+    private fun performLocationSearch(query: String) {
+        val queryParams = hashMapOf<String, Any>(
+            "type" to "restaurant",
+            "location" to locationString,
+            "name" to query,
+            "opennow" to true,
+            "rankby" to "distance",
+            "key" to AppConstants.MAP_KEY
+        )
+        viewModel.searchNearyByLocation(queryParams, AppConstants.NEARBYURL)
+    }
 
-        for (permission in permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                listPermissionsNeeded.add(permission)
-            }
+    private fun checkAndRequestPermissions(): Boolean {
+        val permissionsNeeded = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (listPermissionsNeeded.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toTypedArray(), PERMISSION_REQUEST_CODE)
+        if (permissionsNeeded.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsNeeded.toTypedArray(), PERMISSION_REQUEST_CODE)
             return false
         }
         return true
     }
 
-    // Handle permission request result
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        when (requestCode) {
-            PERMISSION_REQUEST_CODE -> {
-                val perms = HashMap<String, Int>()
-
-                // Fill with results
-                for (i in permissions.indices) {
-                    perms[permissions[i]] = grantResults[i]
-                }
-
-                // Check if all permissions are granted
-                if (perms.values.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    init()  // If permissions are granted, continue with initialization
-                } else {
-                    showSettingsDialog()
-                }
-            }
+        if (requestCode == PERMISSION_REQUEST_CODE && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            initUI()  // Reinitialize UI components
+        } else {
+            showSettingsDialog()
         }
+    }
+
+    private fun initializeLocationClient() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
     private fun startLocationUpdates() {
@@ -170,24 +143,22 @@ class MainActivity : AppCompatActivity(), ResponseListener {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    Log.d("Location", "Lat: ${location.latitude}, Lng: ${location.longitude}")
-                    latitude = location.latitude
-                    longitude = location.longitude
-                    locationString = "$latitude,$longitude"
-
+            locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    locationResult.locations.forEach { location ->
+                        latitude = location.latitude
+                        longitude = location.longitude
+                        locationString = "$latitude,$longitude"
+                        Log.d("Location", "Lat: $latitude, Lng: $longitude")
+                    }
                 }
             }
-        }
 
-        fusedLocationClient?.requestLocationUpdates(locationRequest, locationCallback!!, null)
+            fusedLocationClient?.requestLocationUpdates(locationRequest, locationCallback!!, null)
+        }
     }
 
     override fun onPause() {
@@ -197,8 +168,7 @@ class MainActivity : AppCompatActivity(), ResponseListener {
 
     override fun onStart() {
         super.onStart()
-        checkAndRequestPermissions()
-        if (!isGooglePlayServicesAvailable()) {
+        if (!checkAndRequestPermissions() && !isGooglePlayServicesAvailable()) {
             Toast.makeText(this, "Play Services not available", Toast.LENGTH_SHORT).show()
         } else {
             startLocationUpdates()
@@ -206,18 +176,17 @@ class MainActivity : AppCompatActivity(), ResponseListener {
     }
 
     private fun showSettingsDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Need Permissions")
-        builder.setMessage("This app needs permission to use this feature. You can grant them in app settings.")
-        builder.setPositiveButton("GOTO SETTINGS") { dialog, _ ->
-            dialog.cancel()
-            openSettings()
-        }
-        builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-        builder.show()
+        AlertDialog.Builder(this)
+            .setTitle("Need Permissions")
+            .setMessage("This app needs permission to use this feature. You can grant them in app settings.")
+            .setPositiveButton("GOTO SETTINGS") { dialog, _ ->
+                dialog.cancel()
+                openSettings()
+            }
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
+            .show()
     }
 
-    // Navigating user to app settings
     private fun openSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", packageName, null)
@@ -226,25 +195,26 @@ class MainActivity : AppCompatActivity(), ResponseListener {
     }
 
     private fun isGooglePlayServicesAvailable(): Boolean {
-        val status = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
-        return status == ConnectionResult.SUCCESS
+        return GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS
     }
 
     override fun onSuccess(message: String, url: String) {
         Log.w("onSuccess $url", message)
-      runOnUiThread{
-          arrayList.clear()
-          val pojo = Gson().fromJson(message, PlacePojo::class.java)
-          arrayList.addAll(pojo?.results!!)
-          binding.rvPlacelist.layoutManager =
-              LinearLayoutManager(this@MainActivity, RecyclerView.VERTICAL, false)
-          binding.rvPlacelist.setHasFixedSize(true)
-          placeAdapter = PlaceAdapter(this@MainActivity, arrayList, placeLister)
-          binding.rvPlacelist.adapter = placeAdapter
-      }
+        runOnUiThread {
+            arrayList.clear()
+            val pojo = Gson().fromJson(message, PlacePojo::class.java)
+            arrayList.addAll(pojo?.results ?: emptyList())
+            setupRecyclerView()
+        }
+    }
+
+    private fun setupRecyclerView() {
+        binding.rvPlacelist.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+        binding.rvPlacelist.setHasFixedSize(true)
+        binding.rvPlacelist.adapter = placeAdapter
     }
 
     override fun onFailure(message: String, url: String) {
-        // Handle failure
+        // Handle failure (e.g., show a Toast or log the error)
     }
 }
