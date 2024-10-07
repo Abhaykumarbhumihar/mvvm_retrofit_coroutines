@@ -4,7 +4,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Response
 
-class CommonRequest {
+open class CommonRequest {
 
  suspend fun <T:Any>apiRequest(call:suspend ()->Response<T>):T{
      val  response=call.invoke()
@@ -12,12 +12,14 @@ class CommonRequest {
          return  response.body()!!
      }else{
          val error=response.errorBody().toString()
-         var message=StringBuilder()
+         val message=StringBuilder()
          error.let {
              try {
                  message.append(JSONObject(it).getString("message"))
-             } catch (error: JSONException) { }
-             message.append("\n ${error}")
+             } catch (jsonException: JSONException) {
+                 message.append("\n ${jsonException}")
+             }
+             message.append("\n")
          }
          throw CommonException(message.toString())
      }

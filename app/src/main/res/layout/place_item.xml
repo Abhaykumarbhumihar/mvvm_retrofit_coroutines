@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ll_main"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="5dp"
+    android:background="@color/colorWhite"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="2dp"
+        android:text="Shop name"
+        android:textAlignment="viewStart"
+        android:textColor="@color/colorBlack"
+        android:textSize="@dimen/_10sdp"
+        android:visibility="visible" />
+
+
+    <TextView
+        android:id="@+id/tv_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:drawablePadding="10dp"
+        android:fontFamily="@font/avenirnextltpro_regular"
+        android:padding="2dp"
+        android:text="address"
+        android:textColor="#A5A5A5"
+        android:textSize="@dimen/_12sdp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.8dp"
+        android:layout_marginTop="6dp"
+        android:background="@color/colorLightGray"
+        android:visibility="visible" />
+</LinearLayout>

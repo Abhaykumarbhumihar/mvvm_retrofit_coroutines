@@ -47,9 +47,14 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:3.10.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.6")
+    //Dimen
+    implementation("com.intuit.ssp:ssp-android:1.0.6")
+    implementation("com.intuit.sdp:sdp-android:1.0.6")
+    //smartlocation
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
